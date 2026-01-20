@@ -13,6 +13,16 @@ class Invoice extends Model
         'duration_month',
         'subtotal',
         'total',
-        'status'
+        'status',
     ];
+
+    public function items()
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(Service::class);
+    }
 }

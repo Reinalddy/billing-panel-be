@@ -13,4 +13,9 @@ class InvoiceItem extends Model
         'quantity',
         'total_price'
     ];
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
 }

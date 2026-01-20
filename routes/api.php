@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\ServiceController;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -17,5 +18,11 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => 'user'], function ()
 
         Route::post('/checkout-preview', [ServiceController::class, 'checkout_preview']);
         Route::post('/checkout', [ServiceController::class, 'checkout']);
+    });
+
+    Route::prefix('invoices')->group(function(){
+        Route::get('/', [InvoiceController::class, 'invoices']);
+        Route::get('/{invoice_id}', [InvoiceController::class, 'invoice_detail']);
+        Route::post('/{invoice_id}/pay', [InvoiceController::class, 'invoice_pay']);
     });
 });
