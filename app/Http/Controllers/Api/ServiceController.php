@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductDuration;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -166,14 +167,16 @@ class ServiceController extends Controller
                 'message' => 'Validation error',
                 'errors' => $e->errors(),
             ], 422);
-        } catch (Throwable $e) {
+        } catch (Exception $e) {
             DB::rollBack();
 
-            Log::error('New Service Checkout Error', [
-                'file'    => $e->getFile(),
-                'line'    => $e->getLine(),
-                'message' => $e->getMessage(),
-            ]);
+            $message = [
+                "message" => $e->getMessage(),
+                "file" => $e->getFile(),
+                "line" => $e->getLine(),
+            ];
+
+            Log::critical('Checkout Error', $message);
 
             return response()->json([
                 'code' => 500,
@@ -186,8 +189,13 @@ class ServiceController extends Controller
     {
         try {
             $products = Product::where('is_active', true)
+                // SEARCH MUST ADJUST CAPITALIZE SO WE CONVERT ALL TEXT TO LOWERCASE ALSO FOR DATA COMPARISON
+                ->whereRaw(
+                    'LOWER(name) LIKE ?',
+                    ['%' . strtolower($request->search) . '%']
+                )
                 ->orderBy('id', 'asc')
-                ->get();
+                ->paginate(10);
 
             return response()->json([
                 'code' => 200,
