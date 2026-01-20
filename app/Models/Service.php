@@ -12,6 +12,6 @@ class Service extends Model
         'price',
         'start_date',
         'end_date',
-        'status'
+        'status',
     ];
 }

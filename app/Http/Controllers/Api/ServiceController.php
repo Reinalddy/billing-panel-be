@@ -17,6 +17,33 @@ use Throwable;
 
 class ServiceController extends Controller
 {
+    public function services(Request $request)
+    {
+        try {
+            $perPage = (int) $request->get('per_page', 10);
+
+            $services = Service::where('user_id', $request->user()->id)
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage);
+
+            return response()->json([
+                'code' => 200,
+                'data' => $services,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Get Services Error', [
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal server error',
+            ], 500);
+        }
+    }
+
     public function checkout_preview(Request $request) 
     {
         try {

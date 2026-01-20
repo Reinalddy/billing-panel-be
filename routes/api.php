@@ -12,6 +12,8 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => 'user'], function ()
     Route::get('/me', [AuthController::class, 'me']);
 
     Route::prefix('services')->group(function(){
+        Route::get('/', [ServiceController::class, 'services']);
+
         Route::get('/products', [ServiceController::class, 'product']);
         Route::get('/products/{product_id}', [ServiceController::class, 'product_detail']);
         Route::get('/products/{product_id}/durations', [ServiceController::class, 'product_durations']);
