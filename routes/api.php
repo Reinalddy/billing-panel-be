@@ -20,6 +20,10 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => 'user'], function ()
 
         Route::post('/checkout-preview', [ServiceController::class, 'checkout_preview']);
         Route::post('/checkout', [ServiceController::class, 'checkout']);
+
+        Route::get('/{service_id}/renew-options', [ServiceController::class, 'renew_options']);
+        Route::post('/{service_id}/renew-preview', [ServiceController::class, 'renew_preview']);
+        Route::post('/{service_id}/renew', [ServiceController::class, 'renew']);
     });
 
     Route::prefix('invoices')->group(function(){

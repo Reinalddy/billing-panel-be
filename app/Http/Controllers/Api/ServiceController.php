@@ -309,4 +309,175 @@ class ServiceController extends Controller
             ], 500);
         }
     }
+
+    public function renew_options(Request $request, $id)
+    {
+        try {
+            $service = Service::with('product.durations')
+                ->where('id', $id)
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if (!$service) {
+                return response()->json([
+                    'code' => 404,
+                    'message' => 'Service tidak ditemukan',
+                ], 404);
+            }
+
+            // tidak boleh renew kalau ada invoice unpaid
+            $hasUnpaidInvoice = Invoice::where('service_id', $service->id)
+                ->where('status', 'unpaid')
+                ->exists();
+
+            if ($hasUnpaidInvoice) {
+                return response()->json([
+                    'code' => 400,
+                    'message' => 'Masih ada invoice aktif yang belum dibayar',
+                ], 400);
+            }
+
+            return response()->json([
+                'code' => 200,
+                'data' => [
+                    'service_price' => $service->price,
+                    'durations' => $service->product->durations->map(fn($d) => [
+                        'id' => $d->id,
+                        'month' => $d->duration_month,
+                    ]),
+                ],
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Renew Options Error', [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal server error',
+            ], 500);
+        }
+    }
+
+    public function renew_preview(Request $request, $id)
+    {
+        try {
+
+            $request->validate([
+                'product_duration_id' => 'required|exists:product_durations,id',
+            ]);
+
+            $service = Service::with('product')
+                ->where('id', $id)
+                ->where('user_id', $request->user()->id)
+                ->firstOrFail();
+
+            $duration = ProductDuration::where('id', $request->product_duration_id)
+                ->where('product_id', $service->product_id)
+                ->firstOrFail();
+
+            $total = $service->price * $duration->duration_month;
+
+            return response()->json([
+                'code' => 200,
+                'data' => [
+                    'month' => $duration->duration_month,
+                    'price' => $service->price,
+                    'total' => $total,
+                ],
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Renew Preview Error', [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal server error',
+            ], 500);
+        }
+    }
+
+    public function renew(Request $request, $id)
+    {
+        DB::beginTransaction();
+        try {
+            $request->validate([
+                'product_duration_id' => 'required|exists:product_durations,id',
+            ]);
+
+            $service = Service::with('product')
+                ->where('id', $id)
+                ->where('user_id', $request->user()->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // double check unpaid invoice
+            $hasUnpaidInvoice = Invoice::where('service_id', $service->id)
+                ->where('status', 'unpaid')
+                ->exists();
+
+            if ($hasUnpaidInvoice) {
+                DB::rollBack();
+                return response()->json([
+                    'code' => 400,
+                    'message' => 'Masih ada invoice yang belum dibayar',
+                ], 400);
+            }
+
+            $duration = ProductDuration::where('id', $request->product_duration_id)
+                ->where('product_id', $service->product_id)
+                ->firstOrFail();
+
+            $total = $service->price * $duration->duration_month;
+            $pricePerMonth = $service->price;
+            $durationMonth = $duration->duration_month;
+
+            $invoice = Invoice::create([
+                'user_id'        => $request->user()->id,
+                'service_id'     => $service->id,
+                'invoice_number' => 'INV-' . now()->format('YmdHis'),
+                'duration_month' => $duration->duration_month,
+                'subtotal'       => $total,
+                'total'          => $total,
+                'status'         => 'unpaid',
+            ]);
+
+            // CREATE INVOICE ITEM
+            InvoiceItem::create([
+                'invoice_id'  => $invoice->id,
+                'description' => "Renew Service {$service->product->name} - {$durationMonth} Bulan",
+                'unit_price'  => $pricePerMonth,
+                'quantity'    => $durationMonth,
+                'total_price' => $total,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Invoice renew berhasil dibuat',
+                'data' => [
+                    'invoice_id' => $invoice->id,
+                ],
+            ]);
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Renew Service Error', [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal server error',
+            ], 500);
+        }
+    }
 }

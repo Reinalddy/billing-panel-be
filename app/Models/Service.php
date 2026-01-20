@@ -14,4 +14,9 @@ class Service extends Model
         'end_date',
         'status',
     ];
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
 }
