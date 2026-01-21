@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\SsoController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/sso/login', [SsoController::class, 'login']);
 
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/sso/token', [SsoController::class,'generate']);
