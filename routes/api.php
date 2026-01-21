@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\PluginController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\SsoController;
 
@@ -35,6 +36,11 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
             Route::get('/', [InvoiceController::class, 'invoices']);
             Route::get('/{invoice_id}', [InvoiceController::class, 'invoice_detail']);
             Route::post('/{invoice_id}/pay', [InvoiceController::class, 'invoice_pay']);
+        });
+
+        Route::prefix('game')->group(function(){
+            Route::get('/plugins', [PluginController::class, 'index']); 
+            Route::post('/plugins/{id}/install', [PluginController::class, 'install']); 
         });
 
     });
