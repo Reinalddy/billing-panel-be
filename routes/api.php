@@ -11,6 +11,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/sso/login', [SsoController::class, 'login']);
 
+Route::post('/auth/forgot-password', [AuthController::class, 'forgot_password']);
+Route::post('/auth/reset-password', [AuthController::class, 'reset']);
+
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/sso/token', [SsoController::class,'generate']);
 
